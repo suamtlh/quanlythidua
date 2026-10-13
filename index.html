@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phần mềm Quản lý & Xếp hạng Thi đua - Trường THPT Liên Hà</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; font-size: 1.05rem; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- MÀN HÌNH ĐĂNG NHẬP -->
+    <div id="loginScreen" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl border border-slate-200">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-indigo-700">🔐 Đăng Nhập Hệ Thống</h2>
+                <p class="text-sm text-slate-500 mt-1">Trường THPT Liên Hà - Quản lý thi đua</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Tài khoản</label>
+                    <input type="text" id="usernameInput" placeholder="Nhập tên đăng nhập (admin / to_truong)" class="w-full border border-slate-300 rounded-xl p-3 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Mật khẩu</label>
+                    <input type="password" id="passwordInput" placeholder="Nhập mật khẩu" class="w-full border border-slate-300 rounded-xl p-3 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl text-base shadow-sm transition mt-2">
+                    Đăng Nhập
+                </button>
+                <div class="text-xs text-slate-400 text-center mt-4 space-y-1">
+                    <p>💡 Tài khoản Admin: <b>admin</b> / <b>admin123</b></p>
+                    <p>💡 Tài khoản Tổ trưởng: <b>to_truong</b> / <b>123</b></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GIAO DIỆN CHÍNH (Ẩn khi chưa đăng nhập) -->
+    <div id="mainApp" class="max-w-7xl mx-auto w-full p-4 md:p-8 hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-sm rounded-xl p-6 mb-8 border border-slate-200 flex flex-col md:flex-row justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-indigo-700">🏆 Quản Lý Điểm Thưởng & Xếp Hạng Thi Đua</h1>
+                <p class="text-base text-slate-500 mt-1">Trường THPT Liên Hà - Năm học 2026-2027</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex flex-wrap gap-3 items-center">
+                <span id="userInfo" class="text-sm bg-slate-100 text-slate-700 font-semibold px-3 py-2 rounded-xl"></span>
+                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-base shadow-sm transition flex items-center gap-2">
+                    📥 Xuất Excel
+                </button>
+                <!-- Nút Đặt lại dữ liệu chỉ hiện cho Admin -->
+                <button id="btnReset" onclick="resetData()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold px-4 py-2.5 rounded-xl text-base transition hidden">
+                    🔄 Đặt lại dữ liệu
+                </button>
+                <button onclick="handleLogout()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-base transition">
+                    Đăng xuất
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Form nhập điểm -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 lg:col-span-1 h-fit sticky top-6">
+                <h2 class="text-xl font-bold text-slate-800 mb-5 pb-3 border-b border-slate-100">📝 Cập nhật điểm thưởng</h2>
+                
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-base font-semibold text-slate-700 mb-2">Chọn Tổ chuyên môn</label>
+                        <select id="groupSelect" onchange="updateTeacherOptions()" class="w-full border border-slate-300 rounded-xl p-3.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                            <!-- Các tổ nạp bằng JS -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-base font-semibold text-slate-700 mb-2">Chọn Giáo viên</label>
+                        <select id="teacherSelect" class="w-full border border-slate-300 rounded-xl p-3.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                            <!-- Danh sách GV lọc theo tổ -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-base font-semibold text-slate-700 mb-2">Nội dung công việc</label>
+                        <select id="taskSelect" onchange="updateLevelOptions()" class="w-full border border-slate-300 rounded-xl p-3.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                            <!-- Danh sách công việc nạp bằng JS -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-base font-semibold text-slate-700 mb-2">Cấp độ đạt được</label>
+                        <select id="levelSelect" class="w-full border border-slate-300 rounded-xl p-3.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                            <!-- Các cấp độ tương ứng -->
+                        </select>
+                    </div>
+
+                    <button onclick="addBonusPoint()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl text-base shadow-sm transition mt-3">
+                        ➕ Cộng điểm thưởng
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bảng danh sách giáo viên -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 lg:col-span-2">
+                <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+                    <h2 class="text-xl font-bold text-slate-800">📋 Danh Sách Giáo Viên & Theo Dõi Điểm</h2>
+                    <span id="totalTeachers" class="text-sm bg-indigo-50 text-indigo-700 font-semibold px-3 py-1.5 rounded-full"></span>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-[650px] overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="sticky top-0 bg-slate-100 z-10">
+                            <tr class="text-slate-700 uppercase text-sm tracking-wider border-b border-slate-200">
+                                <th class="p-4 font-bold text-center w-16 border-r border-slate-200">STT</th>
+                                <th class="p-4 font-bold w-36 border-r border-slate-200">Tổ chuyên môn</th>
+                                <th class="p-4 font-bold border-r border-slate-200">Họ và tên</th>
+                                <th class="p-4 font-bold text-center w-32 border-r border-slate-200">Tổng điểm</th>
+                                <th class="p-4 font-bold text-center w-36">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacherTableBody" class="divide-y divide-slate-200 text-base">
+                            <!-- Dữ liệu render bằng JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Xem & Sửa chi tiết công việc (Dành cho Tổ trưởng / Admin) -->
+    <div id="detailModal" class="fixed inset-0 bg-slate-900/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+                <h3 id="modalTitle" class="font-bold text-xl text-slate-800">Chi tiết công việc</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 font-bold text-2xl">&times;</button>
+            </div>
+            <p class="text-xs text-rose-500 mb-3" id="modalSubNote"></p>
+            <div id="modalContent" class="space-y-3 max-h-72 overflow-y-auto mb-5 text-base">
+                <!-- Danh sách công việc đã làm -->
+            </div>
+            <div class="flex justify-end">
+                <button onclick="closeModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2.5 rounded-xl text-base font-semibold transition">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer nhỏ -->
+    <footer class="text-center py-4 text-xs text-slate-400">
+        Trường THPT Liên Hà &copy; 2026-2027
+    </footer>
+
+    <script>
+        const initialTeachers = [
+            { id: 1, to: "BGH", name: "Phạm Thị Hiền", score: 0, logs: [] },
+            { id: 2, to: "BGH", name: "Phạm Đức Duẩn", score: 0, logs: [] },
+            { id: 3, to: "BGH", name: "Lê Văn Đường", score: 0, logs: [] },
+            { id: 4, to: "Lý-CN", name: "Nguyễn Xuân Đức", score: 0, logs: [] },
+            { id: 5, to: "Lý-CN", name: "Nguyễn Thị Hà", score: 0, logs: [] },
+            { id: 6, to: "Lý-CN", name: "Phạm Thị Nghĩa", score: 0, logs: [] },
+            { id: 7, to: "Lý-CN", name: "Hoàng Thúy Phượng", score: 0, logs: [] },
+            { id: 8, to: "Lý-CN", name: "Lê Thị Thủy", score: 0, logs: [] },
+            { id: 9, to: "Lý-CN", name: "Trịnh Danh Hùng", score: 0, logs: [] },
+            { id: 10, to: "Lý-CN", name: "Nguyễn Thị Vân", score: 0, logs: [] },
+            { id: 11, to: "Lý-CN", name: "Hoàng Đức Hưng", score: 0, logs: [] },
+            { id: 12, to: "Lý-CN", name: "Lê Cố Được", score: 0, logs: [] },
+            { id: 13, to: "Toán - Tin", name: "Lê Văn Lưỡng", score: 0, logs: [] },
+            { id: 14, to: "Toán - Tin", name: "Đỗ Ngọc Chúc", score: 0, logs: [] },
+            { id: 15, to: "Toán - Tin", name: "Đào Hoàng Yến", score: 0, logs: [] },
+            { id: 16, to: "Toán - Tin", name: "Phùng Anh Thu Trang", score: 0, logs: [] },
+            { id: 17, to: "Toán - Tin", name: "Trương Thị Tuyết", score: 0, logs: [] },
+            { id: 18, to: "Toán - Tin", name: "Trần Thị Tuyết Hảo", score: 0, logs: [] },
+            { id: 19, to: "Toán - Tin", name: "Nguyễn Thị Bích Liên", score: 0, logs: [] },
+            { id: 20, to: "Toán - Tin", name: "Phạm Thị Mai Sơn", score: 0, logs: [] },
+            { id: 21, to: "Toán - Tin", name: "Đặng Phương Dung", score: 0, logs: [] },
+            { id: 22, to: "Toán - Tin", name: "Nguyễn T H Khuyên", score: 0, logs: [] },
+            { id: 23, to: "Toán - Tin", name: "Nguyễn Thị Canh", score: 0, logs: [] },
+            { id: 24, to: "Toán - Tin", name: "Nguyễn Huy Hùng", score: 0, logs: [] },
+            { id: 25, to: "Toán - Tin", name: "Nguyễn Minh Nguyệt", score: 0, logs: [] },
+            { id: 26, to: "Toán - Tin", name: "Nguyễn Xuân Hội", score: 0, logs: [] },
+            { id: 27, to: "Toán - Tin", name: "Nguyễn Thị Thu Hồng", score: 0, logs: [] },
+            { id: 28, to: "Toán - Tin", name: "Ngô Thị Chi", score: 0, logs: [] },
+            { id: 29, to: "Toán - Tin", name: "Nguyễn Thị Khanh", score: 0, logs: [] },
+            { id: 30, to: "NN-TV", name: "Đồng Văn Ánh", score: 0, logs: [] },
+            { id: 31, to: "NN-TV", name: "Lê Thị Hải", score: 0, logs: [] },
+            { id: 32, to: "NN-TV", name: "Đinh Võ Thùy Dương", score: 0, logs: [] },
+            { id: 33, to: "NN-TV", name: "Phạm Thị Thu Thiêm", score: 0, logs: [] },
+            { id: 34, to: "NN-TV", name: "Lê Thị Thúy Hà", score: 0, logs: [] },
+            { id: 35, to: "NN-TV", name: "Nguyễn Thị Thu Hương", score: 0, logs: [] },
+            { id: 36, to: "NN-TV", name: "Trần Thị Minh Thảo", score: 0, logs: [] },
+            { id: 37, to: "NN-TV", name: "Nghiêm Thị Nụ", score: 0, logs: [] },
+            { id: 38, to: "NN-TV", name: "Nguyễn Thị Nụ", score: 0, logs: [] },
+            { id: 39, to: "NN-TV", name: "Nguyễn Thị Loan", score: 0, logs: [] },
+            { id: 40, to: "NN-TV", name: "Hoàng Thị Thu Hà", score: 0, logs: [] },
+            { id: 41, to: "NN-TV", name: "Phạm Văn Đạt", score: 0, logs: [] },
+            { id: 42, to: "NN-TV", name: "Nguyễn Thị Loan (2)", score: 0, logs: [] },
+            { id: 43, to: "Xã hội", name: "Nguyễn Thị Suôi", score: 0, logs: [] },
+            { id: 44, to: "Xã hội", name: "Lê Đại Đồng", score: 0, logs: [] },
+            { id: 45, to: "Xã hội", name: "Vũ Thị Thu Hằng", score: 0, logs: [] },
+            { id: 46, to: "Xã hội", name: "Đặng Thị Hoài", score: 0, logs: [] },
+            { id: 47, to: "Xã hội", name: "Phan Thị Minh Hạnh", score: 0, logs: [] },
+            { id: 48, to: "Xã hội", name: "Nguyễn Phương Thúy", score: 0, logs: [] },
+            { id: 49, to: "Xã hội", name: "Nguyễn Thị Thanh Nhàn", score: 0, logs: [] },
+            { id: 50, to: "Xã hội", name: "Hoàng Thị Hồng Khoa", score: 0, logs: [] },
+            { id: 51, to: "Xã hội", name: "Đình Thị Tuyến", score: 0, logs: [] },
+            { id: 52, to: "Xã hội", name: "Dương Thị Thủy", score: 0, logs: [] },
+            { id: 53, to: "Xã hội", name: "Ngô Thị Ngọc Ánh", score: 0, logs: [] },
+            { id: 54, to: "Xã hội", name: "Nguyễn Thị Thắm", score: 0, logs: [] },
+            { id: 55, to: "Văn – TD - QP", name: "Hoàng Thị Hiên", score: 0, logs: [] },
+            { id: 56, to: "Văn – TD - QP", name: "Đỗ Thị Hồng Vân", score: 0, logs: [] },
+            { id: 57, to: "Văn – TD - QP", name: "Phạm Thị Thu Vân", score: 0, logs: [] },
+            { id: 58, to: "Văn – TD - QP", name: "Trần Thị Kim Hoa", score: 0, logs: [] },
+            { id: 59, to: "Văn – TD - QP", name: "Nguyễn Thị Thanh Huyền", score: 0, logs: [] },
+            { id: 60, to: "Văn – TD - QP", name: "Nguyễn Thị Trinh", score: 0, logs: [] },
+            { id: 61, to: "Văn – TD - QP", name: "Nguyễn Thị Thu", score: 0, logs: [] },
+            { id: 62, to: "Văn – TD - QP", name: "Đặng Thị Ngạn", score: 0, logs: [] },
+            { id: 63, to: "Văn – TD - QP", name: "Dương Thị Minh Thúy", score: 0, logs: [] },
+            { id: 64, to: "Văn – TD - QP", name: "Nguyễn Minh Tường", score: 0, logs: [] },
+            { id: 65, to: "Văn – TD - QP", name: "Nguyễn Thị Thái Hà", score: 0, logs: [] },
+            { id: 66, to: "Văn – TD - QP", name: "Nguyễn Chu Hạnh", score: 0, logs: [] },
+            { id: 67, to: "Văn – TD - QP", name: "Đặng Văn Chương", score: 0, logs: [] },
+            { id: 68, to: "Văn – TD - QP", name: "Đỗ Văn Thành", score: 0, logs: [] },
+            { id: 69, to: "Văn – TD - QP", name: "Ngô Quốc Long", score: 0, logs: [] },
+            { id: 70, to: "Văn – TD - QP", name: "Nguyễn Văn Cường", score: 0, logs: [] },
+            { id: 71, to: "Văn – TD - QP", name: "Phạm Thị Thúy Giang", score: 0, logs: [] },
+            { id: 72, to: "Văn – TD - QP", name: "Lê Thị Hải QP", score: 0, logs: [] },
+            { id: 73, to: "Hóa Sinh", name: "Nguyễn Thị Nhàn", score: 0, logs: [] },
+            { id: 74, to: "Hóa Sinh", name: "Lê Thị Vinh", score: 0, logs: [] },
+            { id: 75, to: "Hóa Sinh", name: "Trần Thị Kim Lan", score: 0, logs: [] },
+            { id: 76, to: "Hóa Sinh", name: "Nguyễn Thị Thanh Huệ", score: 0, logs: [] },
+            { id: 77, to: "Hóa Sinh", name: "Nguyễn Thị Hậu", score: 0, logs: [] },
+            { id: 78, to: "Hóa Sinh", name: "Trần Thị Minh Thư", score: 0, logs: [] },
+            { id: 79, to: "Hóa Sinh", name: "Phạm Thị Yến", score: 0, logs: [] },
+            { id: 80, to: "Hóa Sinh", name: "Nguyễn Thị Nghị", score: 0, logs: [] },
+            { id: 81, to: "Hóa Sinh", name: "Phan Thị Thoan", score: 0, logs: [] },
+            { id: 82, to: "Hóa Sinh", name: "Nghiêm Thị Lợi", score: 0, logs: [] },
+            { id: 83, to: "Hóa Sinh", name: "Ngô Thị Hương", score: 0, logs: [] },
+            { id: 84, to: "Hóa Sinh", name: "Đỗ Thị Bích Ngọc", score: 0, logs: [] },
+            { id: 85, to: "Hóa Sinh", name: "Nguyễn Thị Thủy", score: 0, logs: [] },
+            { id: 86, to: "Hóa Sinh", name: "Nguyễn Thùy Chi", score: 0, logs: [] },
+            { id: 87, to: "Văn phòng", name: "Nguyễn Văn Thư", score: 0, logs: [] },
+            { id: 88, to: "Văn phòng", name: "Nguyễn Thị Thu Hằng", score: 0, logs: [] },
+            { id: 89, to: "Văn phòng", name: "Nguyễn Thế Hồng", score: 0, logs: [] },
+            { id: 90, to: "Văn phòng", name: "Trần Minh Trí", score: 0, logs: [] },
+            { id: 91, to: "Văn phòng", name: "Dương Thanh Tâm", score: 0, logs: [] },
+            { id: 92, to: "Văn phòng", name: "Nguyễn Thế Ngọc", score: 0, logs: [] },
+            { id: 93, to: "Văn phòng", name: "Nguyễn Thị Thư", score: 0, logs: [] },
+            { id: 94, to: "Văn phòng", name: "Trần Thị Bích Hoàn", score: 0, logs: [] },
+            { id: 95, to: "Văn phòng", name: "Nguyễn Thị Thành", score: 0, logs: [] },
+            { id: 96, to: "Văn phòng", name: "Đào Thùy Linh", score: 0, logs: [] }
+        ];
+
+        const tasksData = [
+            { task: "1- Dạy hội giảng", levels: { "Cấp Tổ": 1.0, "Cấp trường": 1.5, "Cấp cụm": 2.0, "Cấp Sở, Bộ": 2.5 } },
+            { task: "2- Báo cáo chuyên đề", levels: { "Cấp Tổ": 1.0, "Cấp trường": 1.5, "Cấp cụm": 2.0, "Cấp Sở, Bộ": 2.5 } },
+            { task: "3 - Có đề xuất giải pháp đột phá", levels: { "Cấp Tổ": 1.0, "Cấp trường": 1.5, "Cấp cụm": 2.0, "Cấp Sở, Bộ": 2.5 } },
+            { task: "4 - Ra đề, thẩm định đề thi định kỳ chung", levels: { "Cấp Tổ": 1.0, "Cấp trường": 1.5, "Cấp cụm": 2.0, "Cấp Sở, Bộ": 2.5 } },
+            { task: "5 - Ra đề, thẩm định HSG cấp trường / Thi thử TN", levels: { "Cấp trường": 1.5, "Cấp cụm": 2.0, "Cấp Sở, Bộ": 2.5 } },
+            { task: "6 - Tập huấn, chia sẻ kỹ năng cho đồng nghiệp", levels: { "Cấp Tổ": 1.0, "Cấp trường": 1.5, "Cấp cụm": 2.0, "Cấp Sở, Bộ": 2.5 } },
+            { task: "7 - Dạy thay cho GV đi công tác từ 5 tiết/tháng", levels: { "Cấp Tổ": 1.0 } },
+            { task: "8 - Phụ đạo HS yếu kém ít nhất 2 buổi/tháng", levels: { "Cấp trường": 1.5 } },
+            { task: "9 - Có HS đạt giải (từ Giải Ba cấp cụm trở lên)", levels: { "Cấp trường": 1.5, "Cấp cụm": 2.0, "Cấp Sở, Bộ": 2.5 } },
+            { task: "10 - Lớp chủ nhiệm xếp loại Tốt trong tháng", levels: { "Cấp trường": 1.5 } },
+            { task: "11 - Lớp chủ nhiệm đạt danh hiệu Tiên tiến cuối năm", levels: { "Cấp trường": 1.5 } },
+            { task: "12 - Hướng dẫn HS tham gia HĐ tập thể Trường/Cụm", levels: { "Cấp Tổ": 1.0, "Cấp trường": 1.5, "Cấp cụm": 2.0, "Cấp Sở, Bộ": 2.5 } },
+            { task: "13 - Đại diện Tổ/Trường viết bài dự thi các cấp", levels: { "Cấp trường": 1.5, "Cấp cụm": 2.0, "Cấp Sở, Bộ": 2.5 } }
+        ];
+
+        let teachers = [];
+        let currentUser = null;
+
+        const groupColors = {
+            "BGH": "bg-indigo-50 text-indigo-900 font-semibold",
+            "Lý-CN": "bg-blue-50 text-blue-900 font-semibold",
+            "Toán - Tin": "bg-emerald-50 text-emerald-900 font-semibold",
+            "NN-TV": "bg-amber-50 text-amber-900 font-semibold",
+            "Xã hội": "bg-purple-50 text-purple-900 font-semibold",
+            "Văn – TD - QP": "bg-rose-50 text-rose-900 font-semibold",
+            "Hóa Sinh": "bg-teal-50 text-teal-900 font-semibold",
+            "Văn phòng": "bg-slate-100 text-slate-800 font-semibold"
+        };
+
+        function handleLogin() {
+            const user = document.getElementById('usernameInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+
+            if ((user === 'admin' && pass === 'admin') || (user === 'to_truong' && pass === '123')) {
+                currentUser = user;
+                localStorage.setItem('current_user_thi_dua', user);
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                
+                // Phân quyền hiển thị nút Đặt lại dữ liệu
+                if (currentUser === 'admin') {
+                    document.getElementById('userInfo').textContent = "👤 Xin chào: Quản trị viên (Admin)";
+                    document.getElementById('btnReset').classList.remove('hidden');
+                } else {
+                    document.getElementById('userInfo').textContent = "👤 Xin chào: Tổ trưởng chuyên môn";
+                    document.getElementById('btnReset').classList.add('hidden');
+                }
+
+                initApp();
+            } else {
+                alert("Sai tên tài khoản hoặc mật khẩu! Vui lòng thử lại.");
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('current_user_thi_dua');
+            currentUser = null;
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function initApp() {
+            let savedData = localStorage.getItem('teachers_diem_thuong_v7');
+            if (savedData) {
+                try {
+                    teachers = JSON.parse(savedData);
+                } catch (e) {
+                    teachers = JSON.parse(JSON.stringify(initialTeachers));
+                }
+            } else {
+                teachers = JSON.parse(JSON.stringify(initialTeachers));
+            }
+
+            if (!teachers || teachers.length === 0) {
+                teachers = JSON.parse(JSON.stringify(initialTeachers));
+            }
+
+            const groups = [...new Set(teachers.map(t => t.to))];
+            const groupSelect = document.getElementById('groupSelect');
+            groupSelect.innerHTML = '';
+            groups.forEach(g => {
+                let opt = document.createElement('option');
+                opt.value = g;
+                opt.textContent = g;
+                groupSelect.appendChild(opt);
+            });
+
+            updateTeacherOptions();
+
+            const taskSelect = document.getElementById('taskSelect');
+            taskSelect.innerHTML = '';
+            tasksData.forEach((item, index) => {
+                let opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = item.task;
+                taskSelect.appendChild(opt);
+            });
+
+            updateLevelOptions();
+            renderTable();
+        }
+
+        function updateTeacherOptions() {
+            const selectedGroup = document.getElementById('groupSelect').value;
+            const teacherSelect = document.getElementById('teacherSelect');
+            teacherSelect.innerHTML = '';
+
+            const filteredTeachers = teachers.filter(t => t.to === selectedGroup);
+            filteredTeachers.forEach(t => {
+                let opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name;
+                teacherSelect.appendChild(opt);
+            });
+        }
+
+        function updateLevelOptions() {
+            const taskIndex = document.getElementById('taskSelect').value;
+            const levelSelect = document.getElementById('levelSelect');
+            levelSelect.innerHTML = '';
+
+            const selectedTask = tasksData[taskIndex];
+            for (const [levelName, score] of Object.entries(selectedTask.levels)) {
+                let opt = document.createElement('option');
+                opt.value = JSON.stringify({ taskName: selectedTask.task, levelName, score });
+                opt.textContent = `${levelName} (+${score} điểm)`;
+                levelSelect.appendChild(opt);
+            }
+        }
+
+        function addBonusPoint() {
+            const teacherId = parseInt(document.getElementById('teacherSelect').value);
+            const selectionData = JSON.parse(document.getElementById('levelSelect').value);
+
+            const teacher = teachers.find(t => t.id === teacherId);
+            if (teacher) {
+                teacher.score += selectionData.score;
+                teacher.logs.push({
+                    id: Date.now() + Math.random(),
+                    task: selectionData.taskName,
+                    level: selectionData.levelName,
+                    score: selectionData.score
+                });
+
+                localStorage.setItem('teachers_diem_thuong_v7', JSON.stringify(teachers));
+                renderTable();
+                alert(`Đã cộng ${selectionData.score} điểm (${selectionData.taskName} - ${selectionData.levelName}) cho thầy/cô ${teacher.name}!`);
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('teacherTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('totalTeachers').textContent = `Tổng số: ${teachers.length} giáo viên`;
+
+            teachers.forEach((t, index) => {
+                let tr = document.createElement('tr');
+                let groupStyle = groupColors[t.to] || "bg-white text-slate-700";
+
+                let actionBtnHTML = '';
+                if (currentUser === 'admin') {
+                    actionBtnHTML = `<button onclick="viewDetails(${t.id})" class="text-sm bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 px-3 py-2 rounded-lg border border-slate-200 transition font-semibold shadow-sm">Chi tiết (${t.logs.length})</button>`;
+                } else {
+                    // Tài khoản to_truong có nút Sửa / Xóa lịch sử nhầm
+                    actionBtnHTML = `<button onclick="viewDetails(${t.id})" class="text-sm bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-2 rounded-lg border border-amber-200 transition font-semibold shadow-sm">Sửa / Xem (${t.logs.length})</button>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-4 text-center border-r border-slate-200 font-semibold text-slate-500">${index + 1}</td>
+                    <td class="p-4 border-r border-slate-200 ${groupStyle}">${t.to}</td>
+                    <td class="p-4 border-r border-slate-200 font-semibold text-slate-900">${t.name}</td>
+                    <td class="p-4 text-center border-r border-slate-200 font-bold text-indigo-600 text-lg">${t.score}</td>
+                    <td class="p-4 text-center">${actionBtnHTML}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function viewDetails(teacherId) {
+            const t = teachers.find(item => item.id === teacherId);
+            if (!t) return;
+
+            document.getElementById('modalTitle').textContent = `Chi tiết điểm thưởng: ${t.name} (${t.to})`;
+            
+            if (currentUser === 'to_truong') {
+                document.getElementById('modalSubNote').textContent = "💡 Bạn có thể bấm nút 'Xóa' ở mỗi dòng công việc nếu thêm nhầm.";
+            } else {
+                document.getElementById('modalSubNote').textContent = "";
+            }
+
+            const contentDiv = document.getElementById('modalContent');
+            
+            if (t.logs.length === 0) {
+                contentDiv.innerHTML = `<p class="text-slate-400 italic text-center py-6 text-base">Chưa có công việc nào được ghi nhận.</p>`;
+            } else {
+                let html = `<ul class="divide-y divide-slate-100">`;
+                t.logs.forEach((log, idx) => {
+                    let deleteBtn = '';
+                    if (currentUser === 'to_truong') {
+                        deleteBtn = `<button onclick="deleteLog(${t.id}, ${log.id})" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-2.5 py-1 rounded text-xs font-semibold transition">Xóa mục này</button>`;
+                    }
+                    html += `<li class="py-3 flex justify-between items-center text-base gap-3">
+                        <span><b>${idx + 1}.</b> ${log.task} (${log.level}) - <b class="text-indigo-600">+${log.score}đ</b></span>
+                        ${deleteBtn}
+                    </li>`;
+                });
+                html += `</ul>`;
+                contentDiv.innerHTML = html;
+            }
+
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function deleteLog(teacherId, logId) {
+            if (confirm("Bạn có chắc muốn xóa lịch sử công việc này và trừ lại điểm của giáo viên không?")) {
+                const t = teachers.find(item => item.id === teacherId);
+                if (t) {
+                    const logIndex = t.logs.findIndex(l => l.id === logId);
+                    if (logIndex !== -1) {
+                        t.score -= t.logs[logIndex].score;
+                        t.logs.splice(logIndex, 1);
+                        localStorage.setItem('teachers_diem_thuong_v7', JSON.stringify(teachers));
+                        renderTable();
+                        viewDetails(teacherId); // Cập nhật lại modal
+                    }
+                }
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        function exportToExcel() {
+            let sorted = [...teachers].sort((a, b) => b.score - a.score);
+
+            let csvContent = "\uFEFFSTT,Thứ hạng,Tổ chuyên môn,Họ và tên,Tổng điểm cộng,Chi tiết công việc đã thực hiện\n";
+            
+            sorted.forEach((t, index) => {
+                let logStr = t.logs.map(l => `${l.task} [${l.level}: +${l.score}đ]`).join("; ");
+                csvContent += `${index + 1},${index + 1},"${t.to}","${t.name}",${t.score},"${logStr}"\n`;
+            });
+
+            let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = `Bang_Xep_Hang_Thi_Dua_Chi_Tiet_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function resetData() {
+            if (confirm("CẢNH BÁO: Bạn có chắc muốn đặt lại toàn bộ điểm và lịch sử công việc của tất cả giáo viên về 0 không?")) {
+                localStorage.removeItem('teachers_diem_thuong_v7');
+                teachers = JSON.parse(JSON.stringify(initialTeachers));
+                initApp();
+                alert("Đã khôi phục dữ liệu gốc thành công!");
+            }
+        }
+
+        // Tự động giữ đăng nhập nếu đã đăng nhập trước đó trong phiên
+        window.onload = function() {
+            let savedUser = localStorage.getItem('current_user_thi_dua');
+            if (savedUser) {
+                document.getElementById('usernameInput').value = savedUser;
+                if (savedUser === 'admin') document.getElementById('passwordInput').value = 'admin';
+                else document.getElementById('passwordInput').value = '123';
+                handleLogin();
+            }
+        };
+    </script>
+</body>
+</html>
